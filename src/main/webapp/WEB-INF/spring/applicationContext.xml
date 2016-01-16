@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:aop="http://www.springframework.org/schema/aop"
+	xmlns="http://www.springframework.org/schema/beans" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:tx="http://www.springframework.org/schema/tx"
+	xsi:schemaLocation="
+           http://www.springframework.org/schema/aop     http://www.springframework.org/schema/aop/spring-aop-3.1.xsd
+           http://www.springframework.org/schema/beans   http://www.springframework.org/schema/beans/spring-beans-3.1.xsd
+           http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.1.xsd
+           http://www.springframework.org/schema/tx      http://www.springframework.org/schema/tx/spring-tx-3.1.xsd
+       "
+	default-lazy-init="true">
+
+	<!-- 扫描service、dao组件 -->
+	<context:component-scan base-package="com.paincupid.springmvc.*.service,com.paincupid.springmvc.*.persistence" />
+
+	<aop:aspectj-autoproxy proxy-target-class="true" />
+	<!-- <bean id="logAspect" class="com.paincupid.springmvc.application.annotation.currClass.AfterReturningAdvice" />   -->
+
+	<!-- <aop:config>
+		<aop:aspect ref="AfterReturningAdvice" >
+		<aop:pointcut expression="execution(* com.paincupid.springmvc.json.controller.*.*(..)) and args(joinPoint,opLogger)" id="logger"/>
+		<aop:after pointcut-ref="logger" method="writeLogInfo"/>
+		</aop:aspect>
+		</aop:config> -->
+
+	<!-- 
+		<aop:config proxy-target-class="true">
+		<aop:aspect id="goLogAspect" ref="AfterReturningAdvice">
+		<aop:pointcut id="actionPointcut" expression="execution(public *  *(..))" />
+		<aop:before pointcut-ref="actionPointcut" method="writeLogInfo" />
+		</aop:aspect>
+		</aop:config>
+	
+	<bean id="AfterReturningAdvice"
+		class="com.paincupid.springmvc.application.annotation.currClass.AfterReturningAdvice">
+	</bean>
+-->
+
+	<!-- 使用jackson 支持json Java中直接返回类，而不用再使用Json转换 2015.12.27 -->
+	<bean class="org.springframework.web.servlet.mvc.annotation.AnnotationMethodHandlerAdapter">
+		<property name="messageConverters">
+			<list>
+				<ref bean="jsonHttpMessageConverter" />
+			</list>
+		</property>
+	</bean>
+	<bean id="jsonHttpMessageConverter"
+		class="org.springframework.http.converter.json.MappingJackson2HttpMessageConverter">
+		<property name="supportedMediaTypes">
+			<list>
+				<value>application/json;charset=UTF-8</value>
+			</list>
+		</property>
+	</bean>
+
+
+
+	<!-- 分解配置 jdbc.properites -->
+	<!-- <context:property-placeholder location="classpath:jdbc.properties" 
+		/> -->
+	<!-- 数据源BoneCP -->
+	<bean id="dataSource" class="com.jolbox.bonecp.BoneCPDataSource" destroy-method="close">
+		<property name="driverClass" value="oracle.jdbc.driver.OracleDriver" />
+		<property name="jdbcUrl" value="jdbc:oracle:thin:@localhost:1521:orcl" />
+		<property name="username" value="lee" />
+		<property name="password" value="eee" />
+		<property name="maxConnectionsPerPartition" value="30" />
+		<property name="minConnectionsPerPartition" value="10" />
+		<property name="partitionCount" value="1" />
+		<property name="acquireIncrement" value="5" />
+		<property name="statementsCacheSize" value="100" />
+	</bean>
+	<!-- sessionFactory 将spring和mybatis整合 -->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="typeAliasesPackage" value="com.paincupid.springmvc.domain" />
+	</bean>
+
+	<!-- 注册Mapper方式二：也可不指定特定mapper，而使用自动扫描包的方式来注册各种Mapper ，配置如下： -->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+		<property name="basePackage" value="com.paincupid.springmvc.*.persistence" />
+	</bean>
+
+	<!-- 事务 -->
+	<bean name="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager"
+		scope="singleton">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+
+	<tx:advice id="txAdvice" transaction-manager="transactionManager">
+		<tx:attributes>
+			<tx:method name="get*" read-only="true" />
+			<tx:method name="select*" read-only="true" />
+			<tx:method name="add*" isolation="READ_COMMITTED" rollback-for="Exception" />
+			<tx:method name="update*" isolation="READ_COMMITTED" rollback-for="Exception" />
+			<tx:method name="delete*" isolation="READ_COMMITTED" rollback-for="Exception" />
+		</tx:attributes>
+	</tx:advice>
+	<!-- 在service层实现事务控制 -->
+	<aop:config>
+		<aop:pointcut expression="execution(* com.paincupid.springmvc.*.service.*.*(..))" id="pointCut" />
+		<aop:advisor advice-ref="txAdvice" pointcut-ref="pointCut" />
+	</aop:config>
+</beans>
+

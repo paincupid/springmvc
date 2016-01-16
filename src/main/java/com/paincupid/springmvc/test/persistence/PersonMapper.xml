@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "mybatis-3-mapper.dtd" >
+<mapper namespace="com.paincupid.springmvc.test.persistence.PersonMapper" >
+	
+	<select id="listPerson" resultType="com.paincupid.springmvc.test.domain.Person" parameterType="com.paincupid.springmvc.test.domain.Person">
+		select t.empid id,t.name from EMPLOYEE t
+	</select>
+	
+</mapper>
